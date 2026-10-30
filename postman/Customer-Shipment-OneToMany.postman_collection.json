@@ -1,0 +1,327 @@
+{
+  "info": {
+    "name": "Q2 - Customer Shipment (One-to-Many / Many-to-One)",
+    "description": "Run the requests top to bottom (or use Collection Runner). IDs are captured automatically into collection variables.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "customerId", "value": "" },
+    { "key": "email", "value": "" },
+    { "key": "shipmentId", "value": "" },
+    { "key": "newShipmentId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Create Customer with Shipments",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('both shipments saved (cascade)', () => pm.expect(body.shipments).to.have.lengthOf(2));",
+              "pm.test('status defaults to CREATED', () => pm.expect(body.shipments[1].status).to.eql('CREATED'));",
+              "pm.collectionVariables.set('customerId', body.customerId);",
+              "pm.collectionVariables.set('email', body.email);",
+              "pm.collectionVariables.set('shipmentId', body.shipments[0].shipmentId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Anita Desai\",\n  \"email\": \"anita.{{$timestamp}}@example.com\",\n  \"shipments\": [\n    { \"source\": \"Chennai\", \"destination\": \"Bengaluru\", \"status\": \"IN_TRANSIT\" },\n    { \"source\": \"Chennai\", \"destination\": \"Hyderabad\" }\n  ]\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/customers"
+      }
+    },
+    {
+      "name": "2. Get All Customers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('returns a list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/customers" }
+    },
+    {
+      "name": "3. Get Customer by ID (with shipments)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('customer has 2 shipments', () => pm.expect(pm.response.json().shipments).to.have.lengthOf(2));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/customers/{{customerId}}" }
+    },
+    {
+      "name": "4. Update Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('name updated', () => pm.expect(pm.response.json().customerName).to.eql('Anita Desai Iyer'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Anita Desai Iyer\",\n  \"email\": \"{{email}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/customers/{{customerId}}"
+      }
+    },
+    {
+      "name": "5. Add Shipment to Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('201 Created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('shipment belongs to the customer', () => pm.expect(body.customer.customerId).to.eql(Number(pm.collectionVariables.get('customerId'))));",
+              "pm.collectionVariables.set('newShipmentId', body.shipmentId);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"source\": \"Chennai\",\n  \"destination\": \"Kochi\",\n  \"status\": \"CREATED\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/customers/{{customerId}}/shipments"
+      }
+    },
+    {
+      "name": "6. Get Shipments of Customer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('customer now has 3 shipments', () => pm.expect(pm.response.json()).to.have.lengthOf(3));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/customers/{{customerId}}/shipments" }
+    },
+    {
+      "name": "7. Get All Shipments",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('returns a list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/shipments" }
+    },
+    {
+      "name": "8. Get Shipment by ID (with its customer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('shipment shows its one customer', () => pm.expect(pm.response.json().customer.customerId).to.eql(Number(pm.collectionVariables.get('customerId'))));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/shipments/{{newShipmentId}}" }
+    },
+    {
+      "name": "9. Update Shipment Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('status is DELIVERED', () => pm.expect(pm.response.json().status).to.eql('DELIVERED'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"source\": \"Chennai\",\n  \"destination\": \"Kochi\",\n  \"status\": \"DELIVERED\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/shipments/{{newShipmentId}}"
+      }
+    },
+    {
+      "name": "10. Delete Shipment",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/shipments/{{newShipmentId}}" }
+    },
+    {
+      "name": "11. Get Customer after Shipment Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('customer still exists with 2 shipments', () => pm.expect(pm.response.json().shipments).to.have.lengthOf(2));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/customers/{{customerId}}" }
+    },
+    {
+      "name": "12. Duplicate Email (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"customerName\": \"Someone Else\",\n  \"email\": \"{{email}}\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/customers"
+      }
+    },
+    {
+      "name": "13. Invalid Shipment Status (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"source\": \"Chennai\",\n  \"destination\": \"Madurai\",\n  \"status\": \"LOST\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": "{{baseUrl}}/customers/{{customerId}}/shipments"
+      }
+    },
+    {
+      "name": "14. Delete Customer (cascades to shipments)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "DELETE", "header": [], "url": "{{baseUrl}}/customers/{{customerId}}" }
+    },
+    {
+      "name": "15. Get Deleted Customer (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/customers/{{customerId}}" }
+    },
+    {
+      "name": "16. Get Shipment of Deleted Customer (404 - removed by cascade)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+            ]
+          }
+        }
+      ],
+      "request": { "method": "GET", "header": [], "url": "{{baseUrl}}/shipments/{{shipmentId}}" }
+    }
+  ]
+}
